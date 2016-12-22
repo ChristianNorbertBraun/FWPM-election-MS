@@ -1,0 +1,15 @@
+{
+  "name": "student-ballots",
+  "description": "Represents the ballots of a specific student",
+  "main": "student-ballots.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.5.0"
+  },
+  "devDependencies": {
+    
+    "iron-elements": "PolymerElements/iron-elements#^1.0.0",
+    "paper-elements": "PolymerElements/paper-elements#^1.0.1",
+    "web-component-tester": "^4.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0"
+  }
+}

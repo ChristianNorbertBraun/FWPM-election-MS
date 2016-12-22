@@ -1,0 +1,7 @@
+/docker-config/**
+Dockerfile
+/.idea
+/target
+*.iml
+docker-compose.yml
+data/**

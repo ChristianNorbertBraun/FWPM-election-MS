@@ -1,0 +1,56 @@
+<link rel="import" href="/fwpm/bower_components/polymer/polymer.html">
+
+<dom-module id="link-header-parser">
+    <template>
+        <style>
+
+        </style>
+
+    </template>
+
+    <script>
+    Polymer({
+
+      is: 'link-header-parser',
+
+      properties: {
+      },
+
+      ready: function(){
+      },
+
+      unquote: function(value){
+        if (value.charAt(0) == '"' && value.charAt(value.length - 1) == '"') return value.substring(1, value.length - 1);
+            return value;
+      },
+
+      parse: function(linkHeader){
+        var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g;
+        var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g;
+
+        var matches = linkHeader.match(linkexp);
+        var rels = new Object();
+        for (i = 0; i < matches.length; i++) {
+            var split = matches[i].split('>');
+            var url = split[0].substring(1);
+            var ps = split[1];
+            var link = new Object();
+            link.url = url;
+            var s = ps.match(paramexp);
+            for (j = 0; j < s.length; j++) {
+                var p = s[j];
+                var paramsplit = p.split('=');
+                var name = paramsplit[0];
+                link[name] = this.unquote(paramsplit[1]);
+            }
+
+            if (link.rel != undefined) {
+                rels[link.rel] = link;
+            }
+        }
+
+        return rels;
+      }
+    });
+  </script>
+</dom-module>

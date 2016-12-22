@@ -1,0 +1,244 @@
+<link rel="import" href="/fwpm/bower_components/polymer/polymer.html">
+<link rel="import" href="/fwpm/bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="/fwpm/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/fwpm/bower_components/paper-card/paper-card.html">
+<link rel="import" href="/fwpm/bower_components/paper-input/paper-input.html">
+<link rel="import" href="../student-choice/student-choice.html">
+
+<dom-module id="student-ballot">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+
+            student-choice {
+                margin-bottom: 1em;
+            }
+
+            .priority {
+                width: 46%;
+                margin-top: 1em;
+                background: white;
+            }
+
+            .iron-selected {
+                background: var(--main-color);
+            }
+
+            .heading {
+                text-align: center;
+            }
+
+            .cp-info {
+                width: 100%;
+            }
+
+        </style>
+        <template is="dom-if" if="{{canBeUpdated}}">
+            <template is="dom-repeat" items={{studentBallot.choices}} sort=_sortByPriority>
+                <student-choice fwpm-choice={{item}}
+                                is-selected="{{_isSelected(item, choiceToReplace)}}"
+                                on-choice-deleted=_removeChoiceFromStudentBallot
+                                on-find-and-replace="_selectChoice"></student-choice>
+            </template>
+
+            <template is="dom-repeat" items={{missingChoices}} sort=_sortByPriority>
+                <student-choice fwpm-choice={{item}}></student-choice>
+            </template>
+
+            <paper-card class="cp-info">
+                <div class="card-content">
+                    <div>
+                        Ihre CPs: <b>{{studentBallot.cp}}</b>
+                    </div>
+                    <hr>
+                    <div>
+                        Sollte die Anzahl Ihrer CPs nicht korrekt sein
+                        kontaktieren Sie bitte Herrn Hennermann.
+                        <br>
+                        <a href="mailto:frank.hennerman@fhws.de?subject=FWPM-Wahl:%20Fehlerhafte%20CP-Anzahl">frank.hennerman@fhws.de</a>
+                        <br>
+                        <a href="https://studentenportal.fhws.de/login" target=_blank">Studentenportal</a>
+
+                    </div>
+                </div>
+            </paper-card>
+
+            <div>
+                <h4 class="heading">Anzahl gewünschter FWPMs im Semester</h4>
+                <iron-selector selected="{{_requiredFWPMs(studentBallot.requiredFwpms, studentBallot.choices.*)}}"
+                               on-selected-changed="_requiredFWPMsChanged">
+                    <paper-button class="priority" disabled$="{{_isDisabled(1, studentBallot.choices.*)}}">1</paper-button>
+                    <paper-button class="priority" disabled$="{{_isDisabled(2, studentBallot.choices.*)}}">2</paper-button>
+                    <paper-button class="priority" disabled$="{{_isDisabled(3, studentBallot.choices.*)}}">3</paper-button>
+                    <paper-button class="priority" disabled$="{{_isDisabled(4, studentBallot.choices.*)}}">4</paper-button>
+                </iron-selector>
+            </div>
+        </template>
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'student-ballot',
+
+                properties: {
+                    studentBallot: {
+                        type: Object,
+                        notify: true
+                    },
+
+                    dummyData: {
+                        type: Array,
+                        value: [
+                            {
+                                priority: 1,
+                                isDummy: true
+                            },
+                            {
+                                priority: 2,
+                                isDummy: true
+                            },
+                            {
+                                priority: 3,
+                                isDummy: true
+                            },
+                            {
+                                priority: 4,
+                                isDummy: true
+                            }
+                        ]
+                    },
+
+                    missingChoices: {
+                        type: Object,
+                        value: []
+                    },
+
+                    canBeUpdated: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    choiceToReplace: {
+                        type: Object,
+                        value: {}
+                    }
+                },
+
+                observers: [
+                    '_studentBallotChanged(studentBallot, studentBallot.choices.*)'
+
+                ],
+
+                attachFWPMOnStudentBallot: function (fwpm) {
+                    if (!fwpm || !this.studentBallot) {
+                        return;
+                    }
+
+                    if (this._isFWPMChooseable(fwpm)) {
+
+                        var priority;
+                        // If there is a choice through findAndReplace, we have to choose its position
+                        if (this.choiceToReplace.fwpmId) {
+                            priority = this.choiceToReplace.priority;
+                            this.choiceToReplace = {};
+                        } else {
+                            priority = this.studentBallot.choices.length < 4
+                                    ? this.studentBallot.choices.length + 1
+                                    : 4;
+                        }
+
+                        var choice = {
+                            fwpmId: fwpm.id,
+                            name: fwpm.title,
+                            priority: priority
+                        }
+
+                        this.splice("studentBallot.choices", priority - 1, 1, choice);
+                        if (this.studentBallot.requiredFwpms == 0) {
+                            this.set("studentBallot.requiredFwpms", 1)
+                        }
+                        this.fire("ballot-updated", fwpm);
+                    }
+                },
+
+                _requiredFWPMs: function (requiredFWPMs) {
+                    if (this.studentBallot.requiredFwpms > this.studentBallot.choices.length) {
+                        return -1;
+                    }
+
+                    return this.studentBallot.requiredFwpms - 1;
+                },
+
+                _requiredFWPMsChanged: function (e, o) {
+                    if (o.value < 0) {
+                        this.studentBallot.requiredFwpms = 0;
+                    } else {
+                        this.studentBallot.requiredFwpms = o.value + 1;
+                    }
+                },
+
+
+                _isSelected: function (item, choiceToReplace) {
+                    return choiceToReplace.fwpmId && item.fwpmId == choiceToReplace.fwpmId;
+                },
+
+                _isDisabled: function (button, choices) {
+                    return button > this.studentBallot.choices.length;
+                },
+
+                _selectChoice: function (e, choice) {
+                    this.choiceToReplace = !this.choiceToReplace.fwpmId ? choice :
+                            this.choiceToReplace.fwpmId == choice.fwpmId ? {} : choice;
+                },
+
+                _isFWPMChooseable: function (fwpm) {
+                    for (var i = 0; i < this.studentBallot.choices.length; ++i) {
+                        if (fwpm.id == this.studentBallot.choices[i].fwpmId) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+
+                _studentBallotChanged: function (changeRecord) {
+                    this._calculateDummys();
+                },
+
+                _sortByPriority: function (one, other) {
+                    return one.priority < other.priority ? -1 : 1;
+                },
+
+                _calculateDummys: function () {
+                    if (this.studentBallot.choices) {
+                        var length = this.studentBallot.choices.length;
+                        this.missingChoices = (this.dummyData.slice(length, 4));
+                    }
+                },
+
+                _removeChoiceFromStudentBallot: function (e, choice) {
+                    // if priority is deleted, all lower prioritys are moving up
+
+                    for (var i = 0; i < this.studentBallot.choices.length; ++i) {
+
+                        if (choice.priority === this.studentBallot.choices[i].priority) {
+                            this.splice("studentBallot.choices", i, 1);
+                            --i;
+                        }
+                        else if (choice.priority < this.studentBallot.choices[i].priority) {
+                            this.set("studentBallot.choices." + i + ".priority", this.studentBallot.choices[i].priority - 1);
+                        }
+                    }
+
+                    if (this.studentBallot.choices.length == 0) {
+                        this.set("studentBallot.requiredFwpms", 0);
+                    }
+                    this.fire("ballot-updated", choice);
+                }
+            });
+        })();
+    </script>
+</dom-module>

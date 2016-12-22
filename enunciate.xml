@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<enunciate xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:noNamespaceSchemaLocation="http://enunciate.webcohesion.com/schemas/enunciate-2.6.0.xsd">
+    <modules>
+        <java-xml-client disabled="true" />
+        <c-xml-client disabled="true" />
+        <csharp-xml-client disabled="true" />
+        <gwt-json-overlay disabled="true" />
+        <idl disabled="true" />
+        <obj-c-xml-client disabled="true" />
+        <php-json-client disabled="true" />
+        <php-xml-client disabled="true" />
+        <ruby-json-client disabled="true" />
+        <spring-web disabled="true" />
+        <swagger disabled="true" />
+        <jackson1 disabled="true" />
+        <java-xml-client disabled="true" />
+        <javascript-client disabled="true" />
+        <java-json-client disabled="true" />
+    </modules>
+</enunciate>

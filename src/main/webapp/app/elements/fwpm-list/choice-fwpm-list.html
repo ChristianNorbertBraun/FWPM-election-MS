@@ -1,0 +1,101 @@
+<link rel="import" href="/fwpm/bower_components/polymer/polymer.html">
+<link rel="import" href="/fwpm-index/web_components/fwpm-component.html">
+<link rel="import" href="/fwpm/bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="/fwpm/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/fwpm/bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="/fwpm/bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="/fwpm/bower_components/paper-input/paper-input.html">
+
+<dom-module id="choice-fwpm-list">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+
+            paper-button {
+                float: right;
+            }
+
+            paper-input {
+                margin-left: 1.5em;
+                margin-right: 1.5em;
+            }
+        </style>
+
+
+        <template is="dom-if" if="{{canBeUpdated}}">
+            <paper-input value="{{query::input}}" label="Search">
+                <iron-icon icon="search" suffix></iron-icon>
+            </paper-input>
+            <template is="dom-repeat" items={{fwpms}} filter="{{_filter(query)}}" sort="_sortByName">
+                <div hidden$="{{_isFwpmChoosen(studentChoices.*, item)}}">
+                    <fwpm-component fwpm={{item}}>
+                        <paper-button on-tap=_chooseFwpm>
+                            <iron-icon icon="add" class="button-icon"></iron-icon>
+                            Wählen
+                        </paper-button>
+                    </fwpm-component>
+                </div>
+            </template>
+        </template>
+
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'choice-fwpm-list',
+
+                properties: {
+                    fwpms: {
+                        type: Array
+                    },
+                    lastChoice: {
+                        type: Object,
+                        value: {}
+                    },
+                    studentChoices: {
+                        type: Array,
+                        reflectToAttribute: true
+                    },
+                    canBeUpdated: {
+                        type: Boolean,
+                        value: false
+                    }
+                },
+
+                _filter: function(filterVal) {
+                    return function(fwpm) {
+                        if (!filterVal) return true;
+                        if (!fwpm) return false;
+
+                        return fwpm.title.toLowerCase().indexOf(filterVal.toLowerCase()) != -1 ||
+                                fwpm.lecturers.toLowerCase().indexOf(filterVal.toLowerCase()) != -1 ||
+                                fwpm.lecturerInCharge.toLowerCase().indexOf(filterVal.toLowerCase()) != -1;
+                    }
+                },
+
+                _sortByName: function (one, other) {
+                    return one.title < other.title ? -1 : 1;
+                },
+
+                _chooseFwpm: function (e) {
+                    this.lastChoice = e.model.item;
+                    this.fire("fwpm-choosen", e.model.item);
+                },
+
+                _isFwpmChoosen: function (choices, fwpm) {
+                    for (var i = 0; i < this.studentChoices.length; ++i) {
+                        if (this.studentChoices[i].fwpmId == fwpm.id) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+            });
+        })();
+    </script>
+</dom-module>

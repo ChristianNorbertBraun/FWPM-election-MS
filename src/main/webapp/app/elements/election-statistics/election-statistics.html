@@ -1,0 +1,219 @@
+<link rel="import" href="/fwpm/bower_components/polymer/polymer.html">
+<link rel="import" href="/fwpm-index/web_components/fwpm-component.html">
+<link rel="import" href="/fwpm/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/fwpm/bower_components/iron-icons/social-icons.html">
+<link rel="import" href="/fwpm/bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="/fwpm/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/fwpm/bower_components/google-chart/google-chart.html">
+<link rel="import" href="/fwpm/bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="/fwpm/bower_components/paper-card/paper-card.html">
+<link rel="import" href="/fwpm/custom-ajax.html">
+<link rel="import" href="/fwpm-index/web_components/fwpm-component.html">
+<link rel="import" href="../../utils/link-header-parser.html">
+
+<dom-module id="election-statistics">
+    <template>
+        <style>
+            :host {
+                display: block;
+            }
+
+            google-chart {
+                width: 100%;
+            }
+
+            paper-card {
+                margin-top: 1.5em;
+                width: 100%;
+
+            }
+
+            #frame {
+                width: 100%;
+                height: 100%;
+                margin: 30% auto;
+                margin-bottom: 70%;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: auto;
+                background: var(--main-color);
+            }
+
+            #frame paper-card {
+                width: 70%;
+                overflow: auto;
+            }
+
+            #first {
+                margin-left: 0.5em;
+                float: left;
+                width: 50%;
+            }
+
+            #second {
+                overflow: hidden;
+                width: 48%;
+            }
+
+
+        </style>
+        <link-header-parser id="link_parser"></link-header-parser>
+
+        <custom-ajax auth auto="[[selected]]" id="ballot_entry" url={{entryurl}} on-response=_receivedBallotLinks
+                     on-error="_receivedError"></custom-ajax>
+        <custom-ajax auth id="statistic_getter" url={{statisticurl}} handle-as="json" last-response={{statistic}}
+                     on-response=_receivedStatistics on-error="_receivedError"></custom-ajax>
+        <custom-ajax auth id="ballot_getter" url={{balloturl}} handle-as="json" last-response={{studentBallots}}
+                     on-error="_receivedError"></custom-ajax>
+
+        <custom-ajax auth id="fwpm_getter" handle-as="json" last-response="{{fwpm}}"
+                     on-error="_receivedError"></custom-ajax>
+
+        <paper-toast class="errorToast" id="error_toast" duration="5000"
+                     text="Es ist ein Fehler aufgetreten. Bitte probieren Sie es später erneut."></paper-toast>
+
+
+
+        <template is="dom-if" if="{{!validPeriod}}">
+            <div id="frame">
+                <paper-card heading="Aktuell gibt es keine Wahl">
+                    <div class="card-content">Aktuell findet keine Wahl statt. Die Statistiken sind sichtbar, sobald
+                        eine Wahlperiode angelegt wurde.
+                    </div>
+                </paper-card>
+            </div>
+        </template>
+
+
+        <div id="first" hidden$="{{!validPeriod}}">
+            <paper-card heading="Teilnehmer" id="participants">
+                <div class="card-content">
+                    <p>
+                        <iron-icon icon="social:people"></iron-icon>
+                        {{_computeBallotNumber(studentBallots)}}
+                    </p>
+                </div>
+            </paper-card>
+
+            <paper-card>
+                <google-chart
+                        type='bar'
+                        options='{"title": "Interessenten pro FWPM", "tooltip": { "isHtml": true },  "legend": "none", "hAxis": {"minValue":0, "format":0}}'
+                        cols='[{"label":"FWPM", "type":"string"}, {"label":"Studenten", "type":"number"}, {"type": "string", "role": "style"}]'
+                        rows="{{statisticRow}}"
+                        selection="{{chartSelection}}">
+                </google-chart>
+            </paper-card>
+        </div>
+
+        <div id="second">
+            <template is="dom-if" if="{{fwpm}}">
+                <fwpm-component fwpm={{fwpm}}></fwpm-component>
+            </template>
+        </div>
+
+
+    </template>
+    <script>
+        (function () {
+            'use strict';
+
+            Polymer({
+                is: 'election-statistics',
+
+                properties: {
+                    selected: {
+                        type: Boolean,
+                        observer: "_selectionChanged"
+                    },
+                    entryurl: {
+                        type: String
+                    },
+                    statisticurl: {
+                        type: String
+                    },
+                    balloturl: {
+                        type: String
+                    },
+                    statistic: {
+                        type: Array
+                    },
+                    statisticRow: {
+                        type: Array
+                    },
+                    fwpmurl: {
+                        type: String
+                    },
+                    studentBallots: {
+                        type: Array
+                    },
+                    chartSelection: {
+                        type: Object,
+                        observer: "_chartSelectionChanged"
+                    },
+                    validPeriod: {
+                        type: Boolean,
+                        value: true
+                    }
+                },
+
+                _selectionChanged: function() {
+                    this.validPeriod = true;
+                },
+
+                _computeBallotNumber: function (studentBallots) {
+                    if(!studentBallots) {
+                        return 0;
+                    }
+                    return studentBallots.length;
+                },
+
+                _receivedBallotLinks: function (e, response) {
+                    var links = this.$.link_parser.parse(response.xhr.getResponseHeader("Link"));
+
+                    this.statisticurl = links["statistics"].url;
+                    this.$.statistic_getter.generateRequest();
+                    this.balloturl = links["ballots"].url;
+                    this.$.ballot_getter.generateRequest();
+
+                },
+
+                _receivedError: function (e, response) {
+                    var status = response.request.status;
+                    this._handleErrorStatus(status);
+
+                    if (status >= 500 && status < 600) {
+                        this.$.error_toast.open();
+                    }
+                },
+
+                _handleErrorStatus: function (status) {
+                    if (status == 404) {
+                        this.$.ballot_create.generateRequest();
+                        this.studentBallot = {};
+                    } else if (status == 423) {
+                        this.validPeriod = false;
+                    }
+                },
+
+                _receivedStatistics: function () {
+                    this.statisticRow = this.statistic.map(function (votesPerFWPM) {
+                        return [votesPerFWPM.name, votesPerFWPM.votes, "color: #FF6633"];
+                    });
+                },
+
+                _chartSelectionChanged: function () {
+                    if (!this.chartSelection[0]) {
+                        this.fwpm = undefined;
+                        return;
+                    }
+                    var fwpmId = this.statistic[this.chartSelection[0].row].fwpmId;
+                    this.$.fwpm_getter.url = this.fwpmurl + fwpmId;
+                    this.$.fwpm_getter.generateRequest();
+                }
+            });
+        })();
+    </script>
+</dom-module>
